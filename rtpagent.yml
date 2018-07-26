@@ -1,0 +1,38 @@
+--
+- hosts: "{{ cluster }}"
+  remote_user: root
+  become: yes
+  vars:
+    keypair: "{{ mykeyp }}"
+  tasks:
+  - name: Download qxip  repos setup script
+    command: "{{ item }}"
+    with_items:
+      - "curl -o /root/script.1.deb.sh -s https://a9b36f98258eaaf27ee1937c25aa1288116c782673335d9e:@packagecloud.io/install/repositories/qxip/rtpagent/script.deb.sh"
+      - "curl -o /root/script.2.deb.sh -s https://packagecloud.io/install/repositories/qxip/hepic-pub/script.deb.sh"
+
+  - name: add qxip/hepic repo
+    command: "{{ item }}"
+    with_items:
+      - "chmod 755 /root/script.1.deb.sh"
+      - "/root/script.1.deb.sh"
+      - "chmod 755 /root/script.2.deb.sh"
+      - "/root/script.2.deb.sh"
+
+  - name: Install rtpagent
+    apt: pkg={{ item }} state=latest update_cache=yes force=yes
+    with_items:
+       - rtpagent
+
+  - template:
+       src: /home/nahmed/transport_hep.xml.j2
+       dest: /usr/local/rtpagent/etc/transport_hep.xml
+       owner: root
+       group: root
+       mode: 0644
+  - template:
+       src: /home/nahmed/socket_pcap.xml.j2
+       dest: /usr/local/rtpagent/etc/socket_pcap.xml
+       owner: root
+       group: root
+       mode: 0644
