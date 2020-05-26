@@ -1,0 +1,72 @@
+- name: coyote
+  title: Kafka Performance Test
+
+- name: aws-kafka
+  skip: _brokers_
+  entries:
+# BASIC / PERFORMANCE
+    - name: Destroy Topics
+      command: |
+        zookeeper-shell.sh localhost:2181 <<EOF
+        ls /brokers/topics
+        deleteall /brokers/topics/test-1
+        deleteall /brokers/topics/benchmark-1-1-none
+        ls /brokers/topics
+        quit
+        EOF
+    - name: Create Topic Simple
+      command: kafka-topics.sh --create 
+                              --zookeeper localhost:2181 
+                              --replication-factor 1 
+                              --partitions 1 
+                              --topic test-1
+    # Producer Throughput: Single producer thread, no replication, no compression
+    - name: Single Producer Create Topic
+      command: |
+        kafka-topics.sh --create
+                          --zookeeper localhost:2181
+                          --replication-factor 1
+                          --partitions 1
+                          --topic benchmark-1-1-none
+    - name: List Topics
+      command: kafka-topics.sh --zookeeper localhost:2181 --list
+    - name: Set Topic Retention
+      command: |
+        kafka-configs.sh --alter 
+                        --zookeeper localhost:2181 
+                        --entity-type topics 
+                        --entity-name benchmark-1-1-none 
+                        --add-config retention.ms=3600000
+    - name: Set Topic Retention
+      command: |
+        kafka-configs.sh --alter 
+                        --zookeeper localhost:2181 
+                        --entity-type topics 
+                        --entity-name test-1
+                        --add-config retention.ms=3600000
+    - name: Single Producer Test
+      command: |
+        kafka-producer-perf-test.sh --topic benchmark-1-1-none
+                                  --num-records 15000000
+                                  --record-size 100
+                                  --throughput 15000000
+                                  --producer-props
+                                    acks=1
+                                    bootstrap.servers=localhost:9092
+                                    buffer.memory=67108864
+                                    compression.type=none
+                                    batch.size=8196
+    - name: Performance Test Simple
+      command: |
+        kafka-producer-perf-test.sh --topic test-1 
+                                --throughput 100000 
+                                --record-size 1000 
+                                --num-records 2000000
+                                --producer-props
+                                  acks=1
+                                  buffer.memory=67108864
+                                  compression.type=none
+                                  batch.size=8196
+                                  bootstrap.servers=localhost:9092
+  
+      timeout: 90s
